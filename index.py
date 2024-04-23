@@ -6,6 +6,7 @@ from langchain_cohere import ChatCohere
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import AIMessage, HumanMessage
 
 load_dotenv()
 
@@ -35,7 +36,7 @@ chain = prompt | llm | output_parser
 # Function to generate questions
 def generate_questions(notes):
   prompt = question_prompt.format(notes=notes)
-  response = llm.invoke(prompt.assemble())
+  response = llm.invoke(prompt)
   return response
 
 # Function for chat with cohere
@@ -92,8 +93,25 @@ if __name__ == "__main__":
   if "questions_content" in st.session_state:
     st.container(border=True).write(st.session_state.notes_content)
     st.container(border=True).write(st.session_state.questions_content)
-
-  user_input = st.chat_input("Chat with Notes")
-  if user_input is not None:
-      response= chat_with_cohere(user_input)
-      st.write(response)
+    st.session_state.chat_history = [
+        AIMessage(content="Hello, I am your AI workshop Instructor. Ask me any doubts related to the workshop."),
+    ]
+  user_query = st.chat_input("Type your message here...")
+  if user_query is not None and user_query != "":
+    # response = get_response(user_query)
+    # st.session_state.chat_history.append(HumanMessage(content=user_query))
+    # st.session_state.chat_history.append(AIMessage(content=response))
+    st.session_state.chat_history.append(HumanMessage(content=user_query))
+    with st.chat_message("Human"):
+        st.markdown(user_query)
+    
+    with st.chat_message("AI"):
+        response = st.write_stream(get_response(user_query))
+        st.session_state.chat_history.append(AIMessage(content=response))
+        for message in st.session_state.chat_history:
+          if isinstance(message, AIMessage):
+            with st.chat_message("AI"):
+              st.write(message.content)
+          elif isinstance(message, HumanMessage):
+            with st.chat_message("Human"):
+              st.write(message.content)
